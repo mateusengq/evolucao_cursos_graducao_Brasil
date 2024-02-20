@@ -1,0 +1,127 @@
+# Pacotes
+
+library(tidyverse)
+library(arrow)
+library(hrbrthemes)
+library(viridis)
+library(scales)
+
+
+# Leitura dos arquivos
+
+xxxx
+
+
+dados_cursos_global <- read_parquet(caminho_arquivo_cursos)
+dados_cursos_ano <- read_parquet(caminho_arquivo_cursos_ano)
+
+## Visualizar os dados
+dados_cursos <- dados_cursos_global
+
+print(dados_cursos)
+print(dados_cursos_ano)
+
+
+## Grafico global
+
+# Pontos de referencia para linhas paralelas ao eixo
+ref_y <- 0.3
+ref_x <- 50
+
+paleta_cores <- c("#4F5D2F", "#f3A712", "#F3A712", "gray90")
+
+dados_cursos$cores <- ifelse(dados_cursos$prop_mat_privada >= ref_y & dados_cursos$media_alunos_ing >= ref_x,
+                             '#32CD32', 
+                             ifelse(dados_cursos$prop_mat_privada < ref_y & dados_cursos$media_alunos_ing < ref_x,
+                                               'gray70', '#F3A712'))
+
+dados_cursos$quadrante <- ifelse(dados_cursos$prop_mat_privada >= ref_y & dados_cursos$media_alunos_ing >= ref_x,
+                                 'q1', 
+                                 ifelse(dados_cursos$prop_mat_privada < ref_y & dados_cursos$media_alunos_ing < ref_x,
+                                        'q4', 'q2 e q3'))
+
+# Grafico
+(p <- ggplot(dados_cursos, aes(y = prop_mat_privada, x = media_alunos_ing, size = qtde_insc, col = cores), fill = 'grey10') +
+        geom_point(fill = 'black', alpha = .5) +
+        geom_vline(xintercept = ref_x, col = 'darkred', linetype = 'dashed', size = 1) +
+        geom_hline(yintercept = ref_y, col = 'darkred', linetype = 'dashed', size = 1)+
+        #scale_fill_identity()+
+        scale_color_identity() +
+        ggrepel::geom_text_repel(aes(label = NO_CINE_ROTULO), size = 4) +
+        labs(title = 'Matriz de Posicionamento dos Cursos de Graducao', subtitle = 'Base geral dos cursos contendo todos os anos de analise',
+             x = 'Media de Alunos Ingressantes por curso', y = 'Proporcao de alunos que cursaram o Ens. Medio na rede privada',
+             size = 'Quantidade de Inscritos') +
+        scale_size(range = c(2,20)) +
+        scale_y_continuous(breaks = seq(0,1, 0.2), limits = c(0,1)) +
+        scale_x_continuous(breaks  = seq(0, 200, 25), limits = c(0, 200)) +
+        scale_size_continuous(labels = comma_format()) +
+        annotate('text', x = 190, y = ref_y*1.1, label = paste('Ref:', ref_y), col = 'darkred', size = 6, fontface = 'bold')+
+        annotate('text', x = ref_x*1.1, y = 0.0, label = paste('Media ', ref_x), col = 'darkred', size = 6, fontface = 'bold') +
+    theme_ipsum() +
+        theme(legend.position = 'bottom',
+              strip.background = element_rect(color = '#cccccc', fill = '#cccccc', size = 1.5),
+              strip.text = element_text(color = 'black', face = 'bold.italic', vjust = 1, hjust = 0.5),
+              #legend.key = element_rect(fill = c("#969696", "#525252","#cccccc","#00558c")),
+              panel.grid.major = element_blank(),
+              panel.grid.minor = element_blank(),
+              panel.background = element_blank(),
+              axis.title.y = element_text(size = 16),
+              axis.title.x = element_text(size = 16),
+              axis.text.y = element_text(size = 16),
+              axis.text.x = element_text(size = 16),
+              plot.title = element_text(size = 22),
+              plot.title.position = "plot"))
+
+    
+## Dados por ano
+
+ano <- 2022
+ref_y <- 0.3
+ref_x <- 50
+
+dados_cursos <- dados_cursos_ano %>%
+    filter(NU_ANO_CENSO == ano)
+
+paleta_cores <- c("#4F5D2F", "#f3A712", "#F3A712", "gray90")
+
+dados_cursos$cores <- ifelse(dados_cursos$prop_mat_privada >= ref_y & dados_cursos$media_alunos_ing >= ref_x,
+                             '#32CD32', 
+                             ifelse(dados_cursos$prop_mat_privada < ref_y & dados_cursos$media_alunos_ing < ref_x,
+                                    'gray70', '#F3A712'))
+
+dados_cursos$quadrante <- ifelse(dados_cursos$prop_mat_privada >= ref_y & dados_cursos$media_alunos_ing >= ref_x,
+                                 'q1', 
+                                 ifelse(dados_cursos$prop_mat_privada < ref_y & dados_cursos$media_alunos_ing < ref_x,
+                                        'q4', 'q2 e q3'))
+
+# Grafico
+(p <- ggplot(dados_cursos, aes(y = prop_mat_privada, x = media_alunos_ing, size = qtde_insc, col = cores), fill = 'grey10') +
+        geom_point(fill = 'black', alpha = .5) +
+        geom_vline(xintercept = ref_x, col = 'darkred', linetype = 'dashed', size = 1) +
+        geom_hline(yintercept = ref_y, col = 'darkred', linetype = 'dashed', size = 1)+
+        #scale_fill_identity()+
+        scale_color_identity() +
+        ggrepel::geom_text_repel(aes(label = NO_CINE_ROTULO), size = 4) +
+        labs(title = 'Matriz de Posicionamento dos Cursos de Graducao', subtitle = paste('Base geral dos cursos contendo referente ao Ano: ', ano),
+             x = 'Media de Alunos Ingressantes por curso', y = 'Proporcao de alunos que cursaram o Ens. Medio na rede privada',
+             size = 'Quantidade de Inscritos') +
+        scale_size(range = c(2,20)) +
+        scale_y_continuous(breaks = seq(0,1, 0.2), limits = c(0,1)) +
+        scale_x_continuous(breaks  = seq(0, 200, 25), limits = c(0, 200)) +
+        scale_size_continuous(labels = comma_format()) +
+        annotate('text', x = 190, y = ref_y*1.1, label = paste('Ref:', ref_y), col = 'darkred', size = 6, fontface = 'bold')+
+        annotate('text', x = ref_x*1.1, y = 0.0, label = paste('Media ', ref_x), col = 'darkred', size = 6, fontface = 'bold') +
+        theme_ipsum() +
+        theme(legend.position = 'bottom',
+              strip.background = element_rect(color = '#cccccc', fill = '#cccccc', size = 1.5),
+              strip.text = element_text(color = 'black', face = 'bold.italic', vjust = 1, hjust = 0.5),
+              #legend.key = element_rect(fill = c("#969696", "#525252","#cccccc","#00558c")),
+              panel.grid.major = element_blank(),
+              panel.grid.minor = element_blank(),
+              panel.background = element_blank(),
+              axis.title.y = element_text(size = 16),
+              axis.title.x = element_text(size = 16),
+              axis.text.y = element_text(size = 16),
+              axis.text.x = element_text(size = 16),
+              plot.title = element_text(size = 22),
+              plot.title.position = "plot"))
