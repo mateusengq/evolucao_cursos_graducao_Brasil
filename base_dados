@@ -3,3 +3,149 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
+# Leitura dos dados
+
+base_2010 = pd.read_csv('MICRODADOS_CADASTRO_CURSOS_2010.csv', encoding = 'latin1', delimiter = ';')
+base_2015 = pd.read_csv('MICRODADOS_CADASTRO_CURSOS_2015.csv', encoding = 'latin1', delimiter = ';')
+base_2020 = pd.read_csv('MICRODADOS_CADASTRO_CURSOS_2020.csv', encoding = 'latin1', delimiter = ';')
+base_2022 = pd.read_csv('MICRODADOS_CADASTRO_CURSOS_2022.csv', encoding = 'latin1', delimiter = ';')
+
+base_2015.shape #conferencias
+
+# Criacao da base de interesse
+## selecao das variaveis de interesse
+colunas_filtro = [
+'NU_ANO_CENSO',
+'NO_REGIAO',
+'NO_UF',
+'SG_UF',
+'NO_MUNICIPIO',
+'TP_DIMENSAO',
+'TP_ORGANIZACAO_ACADEMICA',
+'TP_CATEGORIA_ADMINISTRATIVA',
+'TP_REDE',
+'NO_CINE_ROTULO',
+'NO_CINE_AREA_GERAL',
+'NO_CINE_AREA_ESPECIFICA',
+'NO_CINE_AREA_DETALHADA',
+'TP_GRAU_ACADEMICO',
+'IN_GRATUITO',
+'TP_MODALIDADE_ENSINO',
+'TP_NIVEL_ACADEMICO',
+'QT_VG_TOTAL',
+'QT_VG_TOTAL_EAD',
+'QT_INSCRITO_TOTAL',
+'QT_ING',
+'QT_MAT',
+'QT_CONC',
+'QT_ING_PROCESCPRIVADA',
+'QT_MAT_PROCESCPRIVADA'
+]
+
+## Filtrar apenas as colunas da lista de interesse
+tmp_2010 = base_2010.filter(items = colunas_filtro)
+tmp_2015 = base_2015.filter(items = colunas_filtro)
+tmp_2020 = base_2020.filter(items = colunas_filtro)
+tmp_2022 = base_2022.filter(items = colunas_filtro)
+
+## Criacao de uma base unica com todos os dados
+
+tmp_geral = pd.concat([tmp_2010, tmp_2015, tmp_2020, tmp_2022])
+
+## Analise geral da base
+tmp_geral.head()
+tmp_geral.info()
+tmp_geral.describe()
+
+## Quantidade de valores nulos por coluna
+# Quantidade de valores nulos por coluna
+quantidade_nulos_por_coluna = tmp_geral.isnull().sum()
+quantidade_perc_nulos_por_coluna = (tmp_geral.isnull().sum()/tmp_geral.shape[0])*100
+
+# dataframe com as informacoes
+df_resultado = pd.DataFrame({
+    'Quantidade de Nulos': quantidade_nulos_por_coluna,
+    'Percentual de Nulos': quantidade_perc_nulos_por_coluna 
+})
+
+# impressao dos dados
+print(df_resultado)
+
+# Quantidade de nulos por ano
+grupos_por_ano = tmp_geral.groupby('NU_ANO_CENSO')
+quantidade_nulos_por_estado = grupos_por_ano.apply(lambda x: x.isnull().sum())
+quantidade_perc_nulos_por_estado = grupos_por_ano.apply(lambda x: (x.isnull().sum() / x.shape[0])*100)
+
+
+# Base de trabalho considerando regras adotadas
+# Criacao da nova base de trabalho excluindo os valores nulos
+
+# Colunas de interesse
+colunas_de_interesse = ['QT_VG_TOTAL', 'QT_VG_TOTAL_EAD', 'QT_INSCRITO_TOTAL']
+
+
+# Criando a nova base de trabalho excluindo os valores nulos
+tmp_geral_filtro = tmp_geral.dropna(subset=colunas_de_interesse, how='all')
+
+# Selecao das IES privadas
+
+tmp_geral_filtro = tmp_geral_filtro[tmp_geral_filtro['TP_REDE'] == 2]
+
+# Exibindo as primeiras linhas da nova base de trabalho
+print(tmp_geral_filtro.head())
+
+
+
+## criacao da base considerando a quantidade de alunos por curso
+
+# agrupando os valores pela variavel curso e pela variavel ano
+df_curso_ano = tmp_geral_filtro.groupby(['NO_CINE_ROTULO', 'NU_ANO_CENSO']).agg(
+    qtde_insc = ('QT_INSCRITO_TOTAL', 'sum'),
+    qtde_ing=('QT_ING', 'sum'),
+    qtde_mat=('QT_MAT','sum'),
+    qtde_conc=('QT_CONC','sum'),
+    qtde_ing_privada=('QT_ING_PROCESCPRIVADA','sum'),
+    qtde_mat_privada=('QT_MAT_PROCESCPRIVADA', 'sum'),
+        media_alunos_mat=('QT_MAT', 'mean'),
+    media_alunos_ing = ('QT_ING', 'mean')
+).reset_index()
+
+print(df_curso_ano)
+
+
+## criacao da base considerando a quantidade de alunos por curso
+
+# agrupando os valores pela variavel curso 
+df_curso = tmp_geral_filtro.groupby(['NO_CINE_ROTULO']).agg(
+    qtde_insc = ('QT_INSCRITO_TOTAL', 'sum'),
+    qtde_ing=('QT_ING', 'sum'),
+    qtde_mat=('QT_MAT','sum'),
+    qtde_conc=('QT_CONC','sum'),
+    qtde_ing_privada=('QT_ING_PROCESCPRIVADA','sum'),
+    qtde_mat_privada=('QT_MAT_PROCESCPRIVADA', 'sum'),
+    media_alunos_mat=('QT_MAT', 'mean'),
+    media_alunos_ing = ('QT_ING', 'mean')
+).reset_index()
+
+
+print(df_curso)
+
+
+# Filtrando apenas os cursos com mais de 200 inscritos no total
+
+df_curso_ano_filtered = df_curso_ano[df_curso_ano['NO_CINE_ROTULO'].isin(df_cursos_filtered['NO_CINE_ROTULO'])]
+
+## Criacao de novas variaveis
+df_cursos_filtered.loc[:, 'prop_ing_privada'] = df_cursos_filtered['qtde_ing_privada'] / df_cursos_filtered['qtde_ing']
+df_cursos_filtered.loc[:, 'prop_mat_privada'] = df_cursos_filtered['qtde_mat_privada'] / df_cursos_filtered['qtde_mat']
+
+
+df_curso_ano_filtered.loc[:, 'prop_ing_privada'] = df_curso_ano_filtered['qtde_ing_privada']/df_curso_ano_filtered['qtde_ing']
+df_curso_ano_filtered.loc[:,'prop_mat_privada'] = df_curso_ano_filtered['qtde_mat_privada']/df_curso_ano_filtered['qtde_mat']
+
+df_curso_ano_filtered.head()
+
+
+## Salvando os dados em Parquet
+df_cursos_filtered.to_parquet(caminho_arquivo_cursos)
+df_curso_ano_filtered.to_parquet(caminho_arquivo_cursos_ano)
